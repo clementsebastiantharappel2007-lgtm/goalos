@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoalOS — Personal Progress</title>
+<style>
+:root{--bg:#0c0d10;--panel:#15171c;--line:#292c34;--muted:#9298a6;--text:#f4f5f7;--accent:#b8f36b;--purple:#b5a1ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:1100px;margin:auto;padding:26px 18px 60px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:25px}
+.logo{font-weight:850;letter-spacing:1px;font-size:21px}.logo span{color:var(--accent)}
+.muted,.hint{color:var(--muted)}.muted{font-size:13px}
+h1{font-size:clamp(27px,5vw,43px);letter-spacing:-1.5px;line-height:1.12;margin:8px 0 12px}
+h2{font-size:17px;margin:0 0 14px}h3{font-size:15px;margin:0 0 5px}
+p{margin:6px 0}
+button,.btn,input,textarea,select{font:inherit}
+button,.btn{border:1px solid var(--line);background:#202229;color:var(--text);padding:10px 13px;border-radius:10px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--accent)}
+.primary{background:var(--accent);color:#15180f;border-color:var(--accent);font-weight:750}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:18px;min-width:0}
+.span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}
+.kpi{font-size:29px;font-weight:800;letter-spacing:-1px;margin:4px 0}
+.accent{color:var(--accent)}.purple{color:var(--purple)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+label{display:block;font-size:13px;color:#c7cad3;margin:12px 0 5px}
+input,textarea,select{width:100%;background:#0e1014;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px}
+input:focus,textarea:focus,select:focus{outline:1px solid var(--accent)}
+textarea{resize:vertical;min-height:70px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.check{display:flex;gap:9px;align-items:flex-start;padding:11px;border:1px solid var(--line);border-radius:10px;color:#e2e4e9;font-size:13px}
+.check input{width:auto;margin-top:4px;accent-color:var(--accent)}
+.bar{height:8px;background:#292c32;border-radius:10px;overflow:hidden;margin-top:9px}
+.bar>div{height:100%;background:var(--accent);border-radius:10px;transition:width .2s}
+canvas{display:block;width:100%;height:220px}
+.goal{padding:12px 0;border-bottom:1px solid var(--line)}
+.goal:last-child{border:0}
+.goalhead{display:flex;gap:12px;align-items:center}
+.icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:#24272e;font-size:20px;flex-shrink:0}
+.goal small{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500}
+.tablewrap{overflow-x:auto}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:12px;color:var(--muted);line-height:1.6}
+footer{margin-top:24px}
+@media(max-width:720px){.span-8,.span-6,.span-4{grid-column:span 12}.fields{grid-template-columns:1fr}.checks{grid-template-columns:1fr}main{padding:18px 12px 40px}.card{padding:15px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="logo">GOAL<span>OS</span> <span style="color:var(--muted);font-size:12px">/ PERSONAL HQ</span></div>
+  <div class="actions">
+    <button id="exportBtn">Export backup</button>
+    <button id="importBtn">Import backup</button>
+    <input type="file" id="importFile" accept=".json" hidden>
+  </div>
+</header>
+
+<section style="margin-bottom:24px">
+  <div class="muted" id="todayLabel"></div>
+  <h1>Build a life you<br><span class="accent">don't need to escape from.</span></h1>
+  <p class="muted">Small actions. Honest tracking. No perfection required.</p>
+</section>
+
+<div class="grid">
+  <section class="card span-4">
+    <div class="muted">TODAY'S HABITS</div>
+    <div class="kpi" id="habitCount">0 / 6</div>
+    <div class="bar"><div id="habitBar" style="width:0%"></div></div>
+    <p class="note">A progress indicator, not a measure of your value.</p>
+  </section>
+  <section class="card span-4">
+    <div class="muted">LATEST SCREEN TIME</div>
+    <div class="kpi" id="screenNow">—</div>
+    <div class="muted">Target: 2h per day</div>
+    <p class="note" id="screenChange">Record today's total below.</p>
+  </section>
+  <section class="card span-4">
+    <div class="muted">STUDY TODAY</div>
+    <div class="kpi" id="studyNow">0 min</div>
+    <div class="muted">Start with one focused session.</div>
+  </section>
+
+  <section class="card span-8">
+    <div class="row"><h2>Screen-time trend</h2><span class="muted">Hours / day</span></div>
+    <canvas id="screenChart" aria-label="Screen time trend"></canvas>
+    <p class="note">Your initial baseline is based on the two screenshots you reported: 9h 28m and 9h 51m. The chart also shows your 2-hour target.</p>
+  </section>
+  <section class="card span-4">
+    <h2>Goal map</h2>
+    <div id="goalMap"></div>
+  </section>
+
+  <section class="card span-8">
+    <div class="row"><h2>Daily check-in</h2><span class="muted">Edit any date</span></div>
+    <label for="entryDate">Date</label>
+    <input type="date" id="entryDate">
+    <div class="fields">
+      <div><label for="screen">Total screen time (hours)</label><input id="screen" type="number" min="0" max="24" step=".05" placeholder="e.g. 7.5"></div>
+      <div><label for="study">Focused study (minutes)</label><input id="study" type="number" min="0" step="5" placeholder="e.g. 60"></div>
+      <div><label for="hindi">Hindi practice (minutes)</label><input id="hindi" type="number" min="0" step="5" placeholder="e.g. 30"></div>
+      <div><label for="typing">Typing speed (WPM)</label><input id="typing" type="number" min="0" step="1" placeholder="e.g. 45"></div>
+      <div><label for="money">Money / career action (minutes)</label><input id="money" type="number" min="0" step="5" placeholder="e.g. 20"></div>
+      <div><label for="mood">Mood (optional)</label><select id="mood"><option value="">Choose if useful</option><option>Rough</option><option>Low</option><option>Okay</option><option>Good</option><option>Great</option></select></div>
+    </div>
+
+    <label>Habits (check what you actually did)</label>
+    <div class="checks">
+      <label class="check"><input type="checkbox" id="started"> Started studying without waiting for motivation</label>
+      <label class="check"><input type="checkbox" id="skin"> Followed my basic skincare routine</label>
+      <label class="check"><input type="checkbox" id="independent"> Made space for myself instead of chasing reassurance</label>
+      <label class="check"><input type="checkbox" id="body"> Followed my ACL-safe plan / appropriate recovery</label>
+      <label class="check"><input type="checkbox" id="core"> Did clinician-approved core or strength work, if cleared</label>
+      <label class="check"><input type="checkbox" id="mindful"> Took a short break without getting lost scrolling</label>
+    </div>
+    <label for="win">One win today</label>
+    <textarea id="win" placeholder="Anything that moved you forward, even a little."></textarea>
+    <label for="tomorrow">One thing to improve tomorrow</label>
+    <textarea id="tomorrow" placeholder="Keep it specific and realistic."></textarea>
+    <div class="actions" style="margin-top:14px">
+      <button class="primary" id="saveBtn">Save daily check-in</button>
+      <button id="clearBtn">Clear form</button>
+    </div>
+    <p class="note" id="saveStatus" role="status"></p>
+  </section>
+
+  <section class="card span-4">
+    <h2>Study consistency</h2>
+    <canvas id="studyChart" aria-label="Daily study minutes"></canvas>
+    <div class="bar"><div id="studyBar" style="width:0%"></div></div>
+    <p class="note" id="studySummary">Your graph updates as you save entries.</p>
+    <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:15px">
+      <h3>Typing progress</h3>
+      <div class="kpi purple" id="typingNow">— WPM</div>
+      <p class="note">Target: 100 WPM. Focus on accuracy before speed.</p>
+    </div>
+  </section>
+
+  <section class="card span-12">
+    <div class="row"><h2>History</h2><span class="muted" id="historyCount">0 entries</span></div>
+    <div class="tablewrap">
+      <table><thead><tr><th>Date</th><th>Screen</th><th>Study</th><th>Hindi</th><th>Typing</th><th>Habits</th><th></th></tr></thead><tbody id="history"></tbody></table>
+    </div>
+    <p class="note">Use Edit to load a past entry into the form. Delete removes that day's record.</p>
+  </section>
+</div>
+<footer class="note">Your data stays in this browser on this device. Export a backup regularly before clearing browser data. This is a tracking tool, not medical advice; follow your clinician's ACL rehab instructions.</footer>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const KEY = 'goalos-v1';
+  const habitIds = ['started','skin','independent','body','core','mindful'];
+  const goals = [
+    ['💚','Emotional independence','Build self-worth beyond other people’s attention.'],
+    ['📵','Screen time','Baseline 9h 40m · Target 2h'],
+    ['🧠','Mental discipline','Reduce procrastination and automatic scrolling.'],
+    ['📚','Studies','Build consistent focused study sessions.'],
+    ['💼','Earn money','Explore useful skills and realistic income paths.'],
+    ['🏋️','Core strength','Only progress within ACL and clinician guidance.'],
+    ['⌨️','Typing','Work toward 100 WPM with accuracy.'],
+    ['✨','Skincare','Keep a consistent, gentle routine.'],
+    ['🇮🇳','Hindi','Aim for 30 minutes of daily practice.']
+  ];
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { data = {}; }
+
+  // Seed the two reported screenshot readings as historical baseline entries.
+  if (!data['2026-10-10'] && !data['2026-10-11'] && !localStorage.getItem(KEY)) {
+    data['2026-10-10'] = {screen:9.4667, study:'', hindi:'', typing:'', money:'', mood:'', habits:[], win:'Baseline from screen-time screenshot.', tomorrow:''};
+    data['2026-10-11'] = {screen:9.85, study:'', hindi:'', typing:'', money:'', mood:'', habits:[], win:'Baseline from screen-time screenshot.', tomorrow:''};
+    persist();
+  }
+
+  function persist(){ localStorage.setItem(KEY, JSON.stringify(data)); }
+  function dateLocal(){
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function fmtTime(h){
+    if (h === '' || h == null || !Number.isFinite(Number(h))) return '—';
+    const m = Math.round(Number(h)*60);
+    return `${Math.floor(m/60)}h ${String(m%60).padStart(2,'0')}m`;
+  }
+  function num(v){ return v === '' || v == null ? null : Number(v); }
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  $('todayLabel').textContent = new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  $('entryDate').value = dateLocal();
+
+  function renderGoals(){
+    $('goalMap').innerHTML = goals.map(([ic,name,desc]) =>
+      `<div class="goal"><div class="goalhead"><div class="icon">${ic}</div><div><h3>${esc(name)}</h3><small>${esc(desc)}</small></div></div></div>`
+    ).join('');
+  }
+
+  function sortedDates(){ return Object.keys(data).sort(); }
+  function render(){
+    const dates = sortedDates();
+    const today = data[$('entryDate').value] || {};
+    const checked = (today.habits || []).length;
+    $('habitCount').textContent = `${checked} / 6`;
+    $('habitBar').style.width = `${checked/6*100}%`;
+    const latest = dates.filter(d=>data[d].screen !== '' && data[d].screen != null).pop();
+    $('screenNow').textContent = latest ? fmtTime(data[latest].screen) : '—';
+    $('screenChange').textContent = latest ? `Latest recorded: ${latest}` : 'Record your first day.';
+    $('studyNow').textContent = `${today.study === '' || today.study == null ? 0 : today.study} min`;
+    $('typingNow').textContent = today.typing === '' || today.typing == null ? '— WPM' : `${today.typing} WPM`;
+
+    const studyValues = dates.map(d=>data[d]).filter(e=>e.study !== '' && e.study != null).map(e=>Number(e.study));
+    const avg = studyValues.length ? Math.round(studyValues.reduce((a,b)=>a+b,0)/studyValues.length) : 0;
+    $('studySummary').textContent = studyValues.length ? `${studyValues.length} logged days · ${avg} min average per logged day.` : 'Log study minutes to see your trend.';
+    $('studyBar').style.width = `${Math.min(100,avg/120*100)}%`;
+
+    drawChart('screenChart', dates.filter(d=>data[d].screen!==''&&data[d].screen!=null).map(d=>({label:d.slice(5),value:Number(data[d].screen)})), 'screen');
+    drawChart('studyChart', dates.filter(d=>data[d].study!==''&&data[d].study!=null).map(d=>({label:d.slice(5),value:Number(data[d].study)})), 'study');
+
+    $('historyCount').textContent = `${dates.length} entries`;
+    $('history').innerHTML = dates.slice().reverse().map(d=>{
+      const e=data[d], h=(e.habits||[]).length;
+      return `<tr><td>${esc(d)}</td><td>${fmtTime(e.screen)}</td><td>${e.study===''||e.study==null?'—':esc(e.study)+'m'}</td><td>${e.hindi===''||e.hindi==null?'—':esc(e.hindi)+'m'}</td><td>${e.typing===''||e.typing==null?'—':esc(e.typing)}</td><td>${h}/6</td><td><div class="actions"><button data-edit="${esc(d)}">Edit</button><button data-delete="${esc(d)}">Delete</button></div></td></tr>`;
+    }).join('') || '<tr><td colspan="7">No entries yet. Save your first check-in above.</td></tr>';
+  }
+
+  function drawChart(id, pts, type){
+    const c=$(id), ctx=c.getContext('2d');
+    const rect=c.getBoundingClientRect(), w=Math.max(260,rect.width), h=220, dpr=window.devicePixelRatio||1;
+    c.width=w*dpr;c.height=h*dpr;ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,w,h);
+    const pad={l:38,r:12,t:18,b:30}, pw=w-pad.l-pad.r, ph=h-pad.t-pad.b;
+    const maxVal=type==='screen'?12:Math.max(60,...pts.map(p=>p.value))*1.15;
+    ctx.font='11px system-ui';ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=pad.t+ph*i/4, val=maxVal*(1-i/4);
+      ctx.strokeStyle='#2a2d35';ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+      ctx.fillStyle='#9298a6';ctx.fillText(Math.round(val),4,y+4);
+    }
+    if(type==='screen'){
+      const y=pad.t+ph*(1-2/maxVal);
+      ctx.strokeStyle='#b5a1ff';ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();ctx.setLineDash([]);
+    }
+    if(!pts.length){ctx.fillStyle='#9298a6';ctx.fillText('Save entries to see your trend',pad.l+8,pad.t+ph/2);return;}
+    const x=i=>pad.l+(pts.length===1?pw/2:pw*i/(pts.length-1));
+    const y=v=>pad.t+ph*(1-v/maxVal);
+    ctx.strokeStyle='#b8f36b';ctx.lineWidth=2.5;ctx.beginPath();
+    pts.forEach((p,i)=>i?ctx.lineTo(x(i),y(p.value)):ctx.moveTo(x(i),y(p.value)));ctx.stroke();
+    pts.forEach((p,i)=>{ctx.fillStyle='#b8f36b';ctx.beginPath();ctx.arc(x(i),y(p.value),3.5,0,Math.PI*2);ctx.fill();});
+    const step=Math.max(1,Math.ceil(pts.length/5));
+    pts.forEach((p,i)=>{if(i%step===0||i===pts.length-1){ctx.fillStyle='#9298a6';ctx.fillText(p.label,x(i)-14,h-9);}});
+  }
+
+  function loadForm(date){
+    $('entryDate').value=date;
+    const e=data[date]||{};
+    ['screen','study','hindi','typing','money','mood','win','tomorrow'].forEach(id=>$(id).value=e[id]??'');
+    habitIds.forEach(id=>$(id).checked=(e.habits||[]).includes(id));
+    $('saveStatus').textContent=`Editing ${date}`;
+    render();
+  }
+  $('entryDate').addEventListener('change',()=>loadForm($('entryDate').value));
+  $('saveBtn').addEventListener('click',()=>{
+    const date=$('entryDate').value;
+    if(!date){$('saveStatus').textContent='Choose a date first.';return;}
+    const screen=$('screen').value, study=$('study').value;
+    if(screen!==''&&(Number(screen)<0||Number(screen)>24)){$('saveStatus').textContent='Screen time must be between 0 and 24 hours.';return;}
+    if(study!==''&&Number(study)<0){$('saveStatus').textContent='Study minutes cannot be negative.';return;}
+    const e={};
+    ['screen','study','hindi','typing','money','mood','win','tomorrow'].forEach(id=>e[id]=$(id).value);
+    e.habits=habitIds.filter(id=>$(id).checked);
+    data[date]=e;persist();render();
+    $('saveStatus').textContent=`Saved ${date}. Keep showing up.`;
+  });
+  $('clearBtn').addEventListener('click',()=>{
+    ['screen','study','hindi','typing','money','mood','win','tomorrow'].forEach(id=>$(id).value='');
+    habitIds.forEach(id=>$(id).checked=false);
+    $('saveStatus').textContent='Form cleared. Your saved entry is unchanged until you save.';
+  });
+  $('history').addEventListener('click',ev=>{
+    const edit=ev.target.closest('[data-edit]'), del=ev.target.closest('[data-delete]');
+    if(edit)loadForm(edit.dataset.edit);
+    if(del&&confirm(`Delete the entry for ${del.dataset.delete}?`)){
+      delete data[del.dataset.delete];persist();render();
+      $('saveStatus').textContent='Entry deleted.';
+    }
+  });
+  $('exportBtn').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='goalos-backup.json';a.click();URL.revokeObjectURL(a.href);
+  });
+  $('importBtn').addEventListener('click',()=>$('importFile').click());
+  $('importFile').addEventListener('change',async ev=>{
+    const f=ev.target.files[0];if(!f)return;
+    try{
+      const parsed=JSON.parse(await f.text());
+      if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Invalid backup');
+      if(confirm('Import backup? This replaces the entries currently stored in this browser.')){
+        data=parsed;persist();loadForm(dateLocal());$('saveStatus').textContent='Backup imported.';
+      }
+    }catch(e){alert('Could not import that file. Choose a valid GoalOS JSON backup.');}
+    ev.target.value='';
+  });
+  window.addEventListener('resize',render);
+  renderGoals();loadForm(dateLocal());
+})();
+</script>
+</body>
+</html>
